@@ -1,0 +1,20 @@
+{
+    "version": 2,
+    "name": "q4a",
+    "builds": [
+        { "src": "main.py", "use": "@contextualist/python-wsgi" }
+    ],
+    "env": {
+        "token": "@quip_token",
+        "config_json": "@config_json"
+    },
+    "routes": [{ 
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Accept"
+        },
+        "src": "/.*",
+        "dest": "main.py"
+    }]
+}

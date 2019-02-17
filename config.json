@@ -1,0 +1,36 @@
+{
+	"iky_api": "http://0.0.0.0:22226/api/v1",
+	"folder_id": "PCeAOAQx6sO",
+	"assign": [
+		{
+			"range": "0-2",
+			"host": ["Evie", "Dre", "Sarah"]
+		},
+		{
+			"range": "3",
+			"host": ["Ella", "Kiki"]
+		}
+	],
+	"block": [
+		{
+			"keyword": "Good Morning AHA",
+			"weight": 1.00,
+			"portion": 1
+		},
+		{
+			"keyword": "In World News",
+			"weight": 1.50,
+			"portion": 3
+		},
+		{
+			"keyword": "Now for Some Amazing",
+			"weight": 1.30,
+			"portion": 1
+		},
+		{
+			"keyword": "In AHA News",
+			"weight": 1.00,
+			"portion": 2
+		}
+	]
+}
