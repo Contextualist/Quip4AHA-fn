@@ -17,6 +17,7 @@ import copy
 import re
 import itertools
 
+P_WORD_COUNT_AVG = 350 # weighted word count for an avg portion
 
 class MyHTMLParser(HTMLParser):
     def __init__(self, keyword, BN):
@@ -79,7 +80,7 @@ class AssignHost(object):
                           range(int(c[0]), int(c[1] if len(c)==2 else c[0])+1)
                            for c in [c.split('-') for c in t['range'].split(',')]))
         # --------------------Portion----------------------
-        self.PNperB = [b['portion'] for b in config['block']] # B[PN]
+        self.PNperB = []
         self.PWordCount = []
         self.CutSign = []
         self.PAssign = []
@@ -142,7 +143,8 @@ class AssignHost(object):
         self.SWordCount = [[swc*self.BWeight[b] for swc in self.SWordCount[b]] for b in range(self.BN)]  # B[S[]], weighted
         self.SID = parser.SID
         self.SNperB = [len(b) for b in self.SWordCount]  # B[SN]
-        self.PNperB = [min(self.PNperB[i], self.SNperB[i]) for i in range(self.BN)]
+        self.PNperB = [sum(swc)//P_WORD_COUNT_AVG+1 for swc in self.SWordCount]
+        self.PNperB = [min(self.PNperB[i], self.SNperB[i]) for i in range(self.BN)] # B[PN]
 
         for t in self.task:
             # task hosts

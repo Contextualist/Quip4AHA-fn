@@ -14,23 +14,19 @@
 	"block": [
 		{
 			"keyword": "Good Morning AHA",
-			"weight": 1.00,
-			"portion": 1
+			"weight": 1.00
 		},
 		{
 			"keyword": "In World News",
-			"weight": 1.50,
-			"portion": 3
+			"weight": 1.50
 		},
 		{
 			"keyword": "Now for Some Amazing",
-			"weight": 1.30,
-			"portion": 1
+			"weight": 1.30
 		},
 		{
 			"keyword": "In AHA News",
-			"weight": 1.00,
-			"portion": 2
+			"weight": 1.00
 		}
 	]
 }
