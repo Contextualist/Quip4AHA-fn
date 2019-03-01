@@ -146,7 +146,7 @@ def parse_config():
     }
 
     if args.config:
-        if os.path.exists(args.config):
+        if not os.path.exists(args.config):
             print("config file '%s' not found, exit." % args.config)
             sys.exit(1)
         with open(args.config, "rb") as f:

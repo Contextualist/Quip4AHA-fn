@@ -28,7 +28,7 @@ class MyHTMLParser(HTMLParser):
         self.__SNNow = 0
         self.__newline = 0  # when there are total two <p> and <br/> between two data, new section
         self.__SIDNow = ''
-        self.SWordCount = []
+        self.SText = []
         self.SID = []
 
     def handle_starttag(self, tag, attrs):
@@ -41,18 +41,17 @@ class MyHTMLParser(HTMLParser):
             self.__newline += 1
 
     def handle_data(self, data):
-        wordcount = len(re.findall(r"\b\w+\b", data))
-        if wordcount == 0: return 0
+        if data.strip() == "": return
         if self.__BNNow+1<=self.__BN-1 and data.find(self.__KeyWord[self.__BNNow+1])!=-1:
             self.__BNNow += 1  # new block
             self.__SNNow = 0
-            self.SWordCount += [[0]]
+            self.SText += [[""]]
             self.SID += [[self.__SIDNow]]
         elif self.__newline >= 2:
             self.__SNNow += 1  # new section
-            self.SWordCount[self.__BNNow] += [0]
+            self.SText[self.__BNNow] += [""]
             self.SID[self.__BNNow] += [self.__SIDNow]
-        self.SWordCount[self.__BNNow][self.__SNNow] += wordcount
+        self.SText[self.__BNNow][self.__SNNow] += data
         self.__newline = 0
 
 
@@ -139,13 +138,13 @@ class AssignHost(object):
         parser.feed(clean_doc)
 
         # =====================SETTINGS====================
-        self.SWordCount = parser.SWordCount
-        self.SWordCount = [[swc*self.BWeight[b] for swc in self.SWordCount[b]] for b in range(self.BN)]  # B[S[]], weighted
+        text = parser.SText
+        word = [[len(re.findall(r"\b\w+\b", s)) for s in b] for b in text]
+        self.SWordCount = [[swc*self.BWeight[b] for swc in word[b]] for b in range(self.BN)]  # B[S[]], weighted
         self.SID = parser.SID
         self.SNperB = [len(b) for b in self.SWordCount]  # B[SN]
-        self.PNperB = [sum(swc)//P_WORD_COUNT_AVG+1 for swc in self.SWordCount]
+        self.PNperB = [int(sum(swc)/P_WORD_COUNT_AVG+1) for swc in self.SWordCount]
         self.PNperB = [min(self.PNperB[i], self.SNperB[i]) for i in range(self.BN)] # B[PN]
-
         for t in self.task:
             # task hosts
             self.Host = t['host']
