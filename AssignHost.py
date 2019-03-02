@@ -17,7 +17,10 @@ import copy
 import re
 import itertools
 
-P_WORD_COUNT_AVG = 350 # weighted word count for an avg portion
+P_WORD_COUNT_AVG = 468 # weighted word count for an avg portion (350w * 1.336)
+fk_weight = lambda sn, wd, sl: 1.0146 ** (100 - (
+          206.835 - 1.015*(wd/sn) - 84.6*(sl/wd)
+          )) # Flesch reading-ease test
 
 class MyHTMLParser(HTMLParser):
     def __init__(self, keyword, BN):
@@ -59,9 +62,8 @@ class AssignHost(object):
 
     def __init__(self):
         # --------------------Block----------------------
-        self.KeyWord = [b['keyword'] for b in config['block']]
+        self.KeyWord = config['block_keyword']
         self.BN = len(self.KeyWord)
-        self.BWeight = [b['weight'] for b in config['block']]  # B[]
         # --------------------Section----------------------
         self.SWordCount = []
         self.SID = []
@@ -139,12 +141,17 @@ class AssignHost(object):
 
         # =====================SETTINGS====================
         text = parser.SText
-        word = [[len(re.findall(r"\b\w+\b", s)) for s in b] for b in text]
-        self.SWordCount = [[swc*self.BWeight[b] for swc in word[b]] for b in range(self.BN)]  # B[S[]], weighted
+        sen = [[len(re.findall(r"(^|[\.\?!])[ \"]*[A-Z]", s, re.M)) for s in b] for b in text]
+        wrd = [[len(re.findall(r"\b\w+\b", s)) for s in b] for b in text]
+        syl = [[len(re.findall(r"[aeiouy]+", s)) for s in b] for b in text]
+        fk = [fk_weight(sum(sen[b]), sum(wrd[b]), sum(syl[b])) for b in range(self.BN)] # B[]
+
+        self.SWordCount = [[swc*fk[b] for swc in wrd[b]] for b in range(self.BN)]  # B[S[]], weighted
         self.SID = parser.SID
         self.SNperB = [len(b) for b in self.SWordCount]  # B[SN]
         self.PNperB = [int(sum(swc)/P_WORD_COUNT_AVG+1) for swc in self.SWordCount]
         self.PNperB = [min(self.PNperB[i], self.SNperB[i]) for i in range(self.BN)] # B[PN]
+
         for t in self.task:
             # task hosts
             self.Host = t['host']

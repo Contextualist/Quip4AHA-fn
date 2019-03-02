@@ -11,22 +11,10 @@
 			"host": ["Ella", "Kiki"]
 		}
 	],
-	"block": [
-		{
-			"keyword": "Good Morning AHA",
-			"weight": 1.00
-		},
-		{
-			"keyword": "In World News",
-			"weight": 1.50
-		},
-		{
-			"keyword": "Now for Some Amazing",
-			"weight": 1.30
-		},
-		{
-			"keyword": "In AHA News",
-			"weight": 1.00
-		}
+	"block_keyword": [
+		"Good Morning AHA",
+		"In World News",
+		"Now for Some Amazing",
+		"In AHA News"
 	]
 }
