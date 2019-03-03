@@ -2,7 +2,7 @@
     "version": 2,
     "name": "q4a",
     "builds": [
-        { "src": "main.py", "use": "@contextualist/python-wsgi" }
+        { "src": "main.py", "use": "@rmnclmnt/python-wsgi" }
     ],
     "env": {
         "token": "@quip_token",

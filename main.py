@@ -6,11 +6,19 @@ app = Flask(__name__)
 def home():
     return "Everything's 200 OK."
 
-@app.route('/getconfig', methods=['POST'])
+@app.route('/config', methods=['GET'])
 def getconfig():
     from flask import jsonify
     from quip4aha import config
     return jsonify(config)
+@app.route('/config', methods=['POST'])
+def updateconfig():
+    from flask import request
+    from quip4aha import config, dump_config
+    for k, v in request.json.items():
+        config[k] = v
+    dump_config()
+    return "Done!"
 
 @app.route('/assign', methods=['POST'])
 def assign():
