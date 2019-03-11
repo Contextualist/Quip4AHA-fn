@@ -11,10 +11,10 @@
 			"host": ["Ella", "Kiki"]
 		}
 	],
-	"block_keyword": [
-		"Good Morning AHA",
-		"In World News",
-		"Now for Some Amazing",
-		"In AHA News"
+	"block": [
+		"Good Morning AHA!\nIt is Wednesday, {NextWednesdayS}. The weather for today is __. There is a(n) __% chance of rain. The high temperature today will be __ degrees Celsius, which is __ degrees Fahrenheit.\n",
+		"**In World News:**\n\n",
+		"**Now for Some Amazing Facts to Blow Your Mind:**\n\n",
+		"**In AHA News:**\n\n\nWe will close with this/these verse(s) from\n\nThat is all for today's AHA broadcasting. Thank you for listening, and as always stay classy AHA!\n"
 	]
 }

@@ -62,7 +62,8 @@ class AssignHost(object):
 
     def __init__(self):
         # --------------------Block----------------------
-        self.KeyWord = config['block_keyword']
+        temptxt = [s.replace('**', '') for s in config['block']] # TODO: sanitize other Markdown syntax
+        self.KeyWord = [s[:min(16, s.index('\n'))] for s in temptxt]
         self.BN = len(self.KeyWord)
         # --------------------Section----------------------
         self.SWordCount = []
