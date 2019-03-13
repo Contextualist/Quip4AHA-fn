@@ -1,18 +1,15 @@
 {
 	"iky_api": "http://0.0.0.0:22226/api/v1",
 	"folder_id": "PCeAOAQx6sO",
+	"metatemplate_id": "JTIAAA9dAKc",
 	"assign": [
 		{
-			"range": "0-2",
-			"host": ["Evie", "Dre", "Sarah"]
-		},
-		{
-			"range": "3",
-			"host": ["Ella", "Kiki"]
+			"range": "0-3",
+			"host": ["Evie", "Dre", "Jacky", "Samuel"]
 		}
 	],
 	"block": [
-		"Good Morning AHA!\nIt is Wednesday, {NextWednesdayS}. The weather for today is __. There is a(n) __% chance of rain. The high temperature today will be __ degrees Celsius, which is __ degrees Fahrenheit.\n",
+		"Good Morning AHA!\nIt is Wednesday, [[date]]. The weather for today is __. There is a(n) __% chance of rain. The high temperature today will be __ degrees Celsius, which is __ degrees Fahrenheit.\n",
 		"**In World News:**\n\n",
 		"**Now for Some Amazing Facts to Blow Your Mind:**\n\n",
 		"**In AHA News:**\n\n\nWe will close with this/these verse(s) from\n\nThat is all for today's AHA broadcasting. Thank you for listening, and as always stay classy AHA!\n"

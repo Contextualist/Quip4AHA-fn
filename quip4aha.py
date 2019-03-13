@@ -164,14 +164,7 @@ def parse_config():
             print('found an error while parsing the config: %s' % e)
             sys.exit(1)
 
-    tplfile = config.get("template", "./template.html")
-    if not os.path.exists(tplfile):
-        print("template file not found, exit.")
-        sys.exit(1)
-    with open(tplfile, "rb") as f:
-        template = f.read().decode('utf8')
-
-    return sysconf, config, template
+    return sysconf, config
 
 def dump_config():
     url = os.environ.get('config_json')
@@ -245,5 +238,5 @@ class InvalidOperation(Exception):
         Exception.__init__(self, message)
         self.code = http_code
 
-sysconf, config, template = parse_config()
+sysconf, config = parse_config()
 q4a = QuipClient4AHA(config)
