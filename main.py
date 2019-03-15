@@ -28,7 +28,7 @@ def assign():
 @app.route('/newdoc', methods=['POST'])
 def newdoc():
     from NewDoc import NewDoc
-    return NewDoc().do()
+    return NewDoc()
 
 @app.route('/updateweather', methods=['POST'])
 def updateweather():
