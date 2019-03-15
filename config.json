@@ -1,11 +1,15 @@
 {
 	"iky_api": "http://0.0.0.0:22226/api/v1",
 	"folder_id": "PCeAOAQx6sO",
-	"metatemplate_id": "JTIAAA9dAKc",
+	"metatemplate_id": "BXXAAAVyB2k",
 	"assign": [
 		{
-			"range": "0-3",
+			"range": "0-2",
 			"host": ["Evie", "Dre", "Jacky", "Samuel"]
+		},
+		{
+			"range": "3",
+			"host": ["Evie", "Kiki"]
 		}
 	],
 	"block": [
