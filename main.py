@@ -33,7 +33,7 @@ def newdoc():
 @app.route('/updateweather', methods=['POST'])
 def updateweather():
     from UpdateWeather import UpdateWeather
-    return UpdateWeather().do()
+    return UpdateWeather()
 
 @app.errorhandler(Exception)
 def handle_exception(e):
