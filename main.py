@@ -23,7 +23,7 @@ def updateconfig():
 @app.route('/assign', methods=['POST'])
 def assign():
     from AssignHost import AssignHost
-    return AssignHost().do()
+    return AssignHost()
 
 @app.route('/newdoc', methods=['POST'])
 def newdoc():
