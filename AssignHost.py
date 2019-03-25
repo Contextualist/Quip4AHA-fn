@@ -15,6 +15,7 @@ from quip4aha import q4a, config, InvalidOperation
 from html.parser import HTMLParser
 import copy
 import re
+import random
 from itertools import chain
 from functools import reduce
 import operator
@@ -105,72 +106,69 @@ def AssignHost():
     PNperB = [int(sum(swc)/P_WORD_COUNT_AVG+1) for swc in SWordCount]
     PNperB = [min(pn,sn) for pn,sn in zip(PNperB,SNperB)] # B[PN]
 
+    host = list(set(chain.from_iterable(t['host'] for t in config['assign'])))
+    host_per_b = [[]] * len(SNperB)
     for t in config['assign']:
-        # task hosts
-        thost = t['host']
-        import random
-        random.shuffle(thost)
+        hn = list(host.index(h) for h in t['host'])
+        random.shuffle(hn)
         # flatten block range
-        taskBtoB = list(chain.from_iterable(
-                      range(int(c[0]), int(c[-1])+1)
-                       for c in [c.split('-') for c in t['range'].split(',')]))
+        taskB = chain.from_iterable(
+                  range(int(c[0]), int(c[-1])+1)
+                    for c in [c.split('-') for c in t['range'].split(',')])
+        for b in taskB:
+            host_per_b[b] = hn
 
-        ans_hassign = \
-            per_task(SNperB, SWordCount, PNperB, len(thost), taskBtoB)
+    ans_hassign = \
+        assign(SNperB, SWordCount, PNperB, len(host), host_per_b)
 
-        # ====================POST DIVISIONS====================
-        tSID = [SID[b] for b in taskBtoB]
-        post_assign(tSID, ans_hassign, thost, doc_id, raw_doc)
-
+    post_assign(SID, ans_hassign, host, doc_id, raw_doc)
     return "Done!"
 
-def per_task(SNperB, SWordCount, PNperB, hostn, taskBtoB):
-    def _assign(st, task_b, s, last_assignee, lastp):
-        if task_b == len(taskBtoB):
+def assign(SNperB, SWordCount, PNperB, hostn, host_per_b):
+    def _assign(st, b, s, last_assignee, lastp):
+        if b == len(PNperB):
             _check_solution(st)
             return
 
-        b = taskBtoB[task_b]
         next1s, wordsum1 = (s+1)%SNperB[b], SWordCount[b][s]
         nextxs, wordsumx = 0, sum(SWordCount[b][s:])
-        for h in range(hostn):
+        for h in host_per_b[b]:
             if h == last_assignee:
                 if s == 0: continue  # cross block, no
                 p = lastp
             else:
                 p = lastp + 1
-                st.HAssign[task_b][s] = h
+                st.HAssign[b][s] = h
 
             if p < PNperB[b]-1:
                 nexts, wordsum = next1s, wordsum1
             else:  # reach the limit, take the rest
                 nexts, wordsum = nextxs, wordsumx
             st.HostWordCount[h] += wordsum
-            _assign(st, task_b+(nexts==0), nexts, h, -1 if nexts==0 else p)
+            _assign(st, b+(nexts==0), nexts, h, -1 if nexts==0 else p)
             st.HostWordCount[h] -= wordsum
-        st.HAssign[task_b][s] = -1
+        st.HAssign[b][s] = -1
 
     st = make_dataclass('state', ['HostWordCount', 'Ans_HostWordCountRange',
                                   'HAssign', 'Ans_HAssign'])(
         HostWordCount=[0.00] * hostn,
         Ans_HostWordCountRange=1000.00,
-        HAssign=[[-1]*SNperB[b] for b in taskBtoB],
+        HAssign=[[-1]*s for s in SNperB],
         Ans_HAssign=[],
     )
-    st.HAssign[0][0] = 0
-    st.HostWordCount[0] += SWordCount[taskBtoB[0]][0]
-    if PNperB[taskBtoB[0]] > 1:
+    st.HAssign[0][0] = host_per_b[0][0]
+    st.HostWordCount[host_per_b[0][0]] += SWordCount[0][0]
+    if PNperB[0] > 1:
         _assign(st, 0, 1, 0, 0)
     else:
         _assign(st, 1, 0, 0, -1)
     return st.Ans_HAssign
 
-def post_assign(sidt, hassign, host, doc_id, raw_doc):
+def post_assign(SID, hassign, host, doc_id, raw_doc):
     a = OrderedDict() # {sid: [(br, h)]} "In para {sid}, mark {br}th <br/> with host[{h}]"
-    for sid_tb, ha_tb in zip(sidt, hassign):
-        for s, h in enumerate(ha_tb):
+    for sid_b, ha_b in zip(SID, hassign):
+        for (sid, br), h in zip(sid_b, ha_b):
             if h == -1: continue
-            sid, br = sid_tb[s]
             a.setdefault(sid, [])
             a[sid] += [(br, h)]
     last_pos = 0
