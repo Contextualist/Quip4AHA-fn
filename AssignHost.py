@@ -69,7 +69,7 @@ def _check_solution(st):
     v = max(st.HostWordCount) - min(st.HostWordCount)
     if v < st.Ans_HostWordCountRange:
         st.Ans_HostWordCountRange = v
-        st.Ans_CutSign, st.Ans_PAssign = copy.deepcopy(st.CutSign), copy.deepcopy(st.PAssign)
+        st.Ans_HAssign = copy.deepcopy(st.HAssign)
 
 def AssignHost():
     # ====================DOC CATCHER====================
@@ -115,12 +115,12 @@ def AssignHost():
                       range(int(c[0]), int(c[-1])+1)
                        for c in [c.split('-') for c in t['range'].split(',')]))
 
-        ans_passign, ans_cutsign = \
+        ans_hassign = \
             per_task(SNperB, SWordCount, PNperB, len(thost), taskBtoB)
 
         # ====================POST DIVISIONS====================
         tSID = [SID[b] for b in taskBtoB]
-        post_assign(tSID, ans_passign, ans_cutsign, thost, doc_id, raw_doc)
+        post_assign(tSID, ans_hassign, thost, doc_id, raw_doc)
 
     return "Done!"
 
@@ -139,7 +139,7 @@ def per_task(SNperB, SWordCount, PNperB, hostn, taskBtoB):
                 p = lastp
             else:
                 p = lastp + 1
-                st.CutSign[task_b][p], st.PAssign[task_b][p] = s, h
+                st.HAssign[task_b][s] = h
 
             if p < PNperB[b]-1:
                 nexts, wordsum = next1s, wordsum1
@@ -148,40 +148,38 @@ def per_task(SNperB, SWordCount, PNperB, hostn, taskBtoB):
             st.HostWordCount[h] += wordsum
             _assign(st, task_b+(nexts==0), nexts, h, -1 if nexts==0 else p)
             st.HostWordCount[h] -= wordsum
+        st.HAssign[task_b][s] = -1
 
     st = make_dataclass('state', ['HostWordCount', 'Ans_HostWordCountRange',
-                             'CutSign', 'PAssign', 'Ans_PAssign', 'Ans_CutSign'])(
+                                  'HAssign', 'Ans_HAssign'])(
         HostWordCount=[0.00] * hostn,
         Ans_HostWordCountRange=1000.00,
-        CutSign=[[-1]*PNperB[b] for b in taskBtoB],
-        PAssign=[[-1]*PNperB[b] for b in taskBtoB],
-        Ans_PAssign=[],
-        Ans_CutSign=[],
+        HAssign=[[-1]*SNperB[b] for b in taskBtoB],
+        Ans_HAssign=[],
     )
-    st.CutSign[0][0], st.PAssign[0][0] = 0, 0
+    st.HAssign[0][0] = 0
     st.HostWordCount[0] += SWordCount[taskBtoB[0]][0]
     if PNperB[taskBtoB[0]] > 1:
         _assign(st, 0, 1, 0, 0)
     else:
         _assign(st, 1, 0, 0, -1)
-    return st.Ans_PAssign, st.Ans_CutSign
+    return st.Ans_HAssign
 
-def post_assign(sidt, passign, cutsign, host, doc_id, raw_doc):
-    a = OrderedDict() # {sid: [(br, pa)]}
-    for sid_tb, pa_tb, cs_tb in zip(sidt, passign, cutsign):
-        for pa, cs in zip(pa_tb, cs_tb):
-            if cs == -1:
-                break
-            sid, br = sid_tb[cs]
+def post_assign(sidt, hassign, host, doc_id, raw_doc):
+    a = OrderedDict() # {sid: [(br, h)]} "In para {sid}, mark {br}th <br/> with host[{h}]"
+    for sid_tb, ha_tb in zip(sidt, hassign):
+        for s, h in enumerate(ha_tb):
+            if h == -1: continue
+            sid, br = sid_tb[s]
             a.setdefault(sid, [])
-            a[sid] += [(br, pa)]
+            a[sid] += [(br, h)]
     last_pos = 0
-    for sid, br_pa in a.items():
+    for sid, br_h in a.items():
         m = re.compile(rf"<p id='{sid}' class='line'>(.+?)</p>").search(raw_doc, last_pos)
         last_pos = m.end()
         para = m.group(1).split('<br/>')
-        for br, pa in br_pa[::-1]:
-            para.insert(br, f'<i>//{host[pa]}</i>')
+        for br, h in br_h[::-1]:
+            para.insert(br, f'<i>//{host[h]}</i>')
         content = '<br/>'.join(para)
         q4a.edit_document(thread_id=doc_id,
                           content=f"<p class='line'>{content}</p>",
