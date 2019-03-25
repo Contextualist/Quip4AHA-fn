@@ -15,7 +15,10 @@ from quip4aha import q4a, config, InvalidOperation
 from html.parser import HTMLParser # for py2, pip install future
 import copy
 import re
-import itertools
+from itertools import chain, tee, starmap, accumulate
+from functools import reduce
+import operator
+from collections import OrderedDict
 
 P_WORD_COUNT_AVG = 468 # weighted word count for an avg portion (350w * 1.336)
 fk_weight = lambda sn, wd, sl: 1.0146 ** (100 - (
@@ -30,6 +33,7 @@ class MyHTMLParser(HTMLParser):
         self.__BNNow = -1
         self.__SNNow = 0
         self.__newline = 0  # when there are total two <p> and <br/> between two data, new section
+        self.__br = 0 # for headless section of two <br/>, sid is not unique identifier
         self.__SIDNow = ''
         self.SText = []
         self.SID = []
@@ -38,10 +42,12 @@ class MyHTMLParser(HTMLParser):
         if tag == "p":
             self.__SIDNow = attrs[0][1]  # extract the ID attr
             self.__newline += 1
+            self.__br = 0
 
     def handle_startendtag(self, tag, attrs):
         if tag == "br":
             self.__newline += 1
+            self.__br += 1
 
     def handle_data(self, data):
         if data.strip() == "": return
@@ -49,11 +55,11 @@ class MyHTMLParser(HTMLParser):
             self.__BNNow += 1  # new block
             self.__SNNow = 0
             self.SText += [[""]]
-            self.SID += [[self.__SIDNow]]
+            self.SID += [[(self.__SIDNow, self.__br)]]
         elif self.__newline >= 2:
             self.__SNNow += 1  # new section
             self.SText[self.__BNNow] += [""]
-            self.SID[self.__BNNow] += [self.__SIDNow]
+            self.SID[self.__BNNow] += [(self.__SIDNow, self.__br)]
         self.SText[self.__BNNow][self.__SNNow] += data
         self.__newline = 0
 
@@ -78,12 +84,11 @@ class AssignHost(object):
         self.task = config['assign']
         for t in self.task:
             # flatten block range
-            t['parsed_range'] = list(itertools.chain.from_iterable(
-                          range(int(c[0]), int(c[1] if len(c)==2 else c[0])+1)
+            t['parsed_range'] = list(chain.from_iterable(
+                          range(int(c[0]), int(c[-1])+1)
                            for c in [c.split('-') for c in t['range'].split(',')]))
         # --------------------Portion----------------------
         self.PNperB = []
-        self.PWordCount = []
         self.CutSign = []
         self.PAssign = []
         self.Ans_CutSign = []
@@ -164,7 +169,6 @@ class AssignHost(object):
             # task blocks
             self.taskBtoB = t['parsed_range']
             self.taskBN = len(self.taskBtoB)
-            self.PWordCount = [[0]*self.PNperB[b] for b in self.taskBtoB]
             self.CutSign = [[-1]*self.PNperB[b] for b in self.taskBtoB]
             self.PAssign = [[-1]*self.PNperB[b] for b in self.taskBtoB]
             # ====================DISTRIBUTE(S->P)====================
@@ -176,19 +180,31 @@ class AssignHost(object):
                 self._assign(1, 0, 0, -1)
 
             # ====================POST DIVISIONS====================
-            last_pos = 0
-            for tb, b in enumerate(self.taskBtoB):
-                for p in range(self.PNperB[b]):
-                    if self.Ans_CutSign[tb][p] == -1:
-                        break
-                    m = re.compile(r"<p id='%s' class='line'>(.+?)</p>" % self.SID[b][self.Ans_CutSign[tb][p]]).search(raw_doc, last_pos)
-                    orig_content = m.group(1)
-                    last_pos = m.end()
-                    self.client.edit_document(thread_id=doc_id,
-                                              content=r"<p class='line'><i>//%s</i><br/>%s</p>" % (self.Host[self.Ans_PAssign[tb][p]], orig_content),
-                                              operation=self.client.REPLACE_SECTION, section_id=self.SID[b][self.Ans_CutSign[tb][p]])
+            SIDt = [self.SID[b] for b in self.taskBtoB]
+            self.post_assign(SIDt, self.Ans_PAssign, self.Ans_CutSign, self.Host, doc_id, raw_doc)
 
         return "Done!"
+
+    def post_assign(self, sidt, passign, cutsign, host, doc_id, raw_doc):
+        a = OrderedDict() # {sid: [(br, pa)]}
+        for sid_tb, pa_tb, cs_tb in zip(sidt, passign, cutsign):
+            for pa, cs in zip(pa_tb, cs_tb):
+                if cs == -1:
+                    break
+                sid, br = sid_tb[cs]
+                a.setdefault(sid, [])
+                a[sid] += [(br, pa)]
+        last_pos = 0
+        for sid, br_pa in a.items():
+            m = re.compile(rf"<p id='{sid}' class='line'>(.+?)</p>").search(raw_doc, last_pos)
+            last_pos = m.end()
+            para = m.group(1).split('<br/>')
+            for br, pa in br_pa[::-1]:
+                para.insert(br, f'<i>//{host[pa]}</i>')
+            content = '<br/>'.join(para)
+            q4a.edit_document(thread_id=doc_id,
+                              content=f"<p class='line'>{content}</p>",
+                              operation=q4a.REPLACE_SECTION, section_id=sid)
 
 if __name__ == "__main__":
     AssignAction = AssignHost()
