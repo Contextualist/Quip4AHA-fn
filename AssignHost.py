@@ -66,14 +66,7 @@ class MyHTMLParser(HTMLParser):
         self.__newline = 0
 
 
-def _check_solution(st):
-    v = max(st.HostWordCount) - min(st.HostWordCount)
-    if v < st.Ans_HostWordCountRange:
-        st.Ans_HostWordCountRange = v
-        st.Ans_HAssign = copy.deepcopy(st.HAssign)
-
-def AssignHost():
-    # ====================DOC CATCHER====================
+def precondition():
     doc_id = q4a.latest_script_id
     raw_doc = q4a.get_thread(id=doc_id)["html"]
     '''
@@ -81,19 +74,18 @@ def AssignHost():
     thread = q4a.get_thread(id=docURL)
     doc_id = thread['thread']['id'] # test doc id: [a-zA-Z0-9]{11}
     '''
-
-    # ====================DOC PRE-PROCESSOR====================
     if raw_doc.find(r'<i>//') != -1:
         raise InvalidOperation("Redundancy Warning: The script has already been divided and assigned!")
-    clean_doc = raw_doc.encode('ascii', 'ignore').decode('ascii')  # clear all non-ascii
-    clean_doc = re.sub(r'<h1.+</h1>', '', clean_doc, count=1)  # delete the header
+    return doc_id, raw_doc
 
-    temptxt = [s.replace('**', '') for s in config['block']] # TODO: sanitize other Markdown syntax
+def parse_doc(raw_doc, template):
+    clean_doc = raw_doc.encode('ascii', 'ignore').decode('ascii')  # clear all non-ascii
+    clean_doc = clean_doc[clean_doc.find('</h1>')+len('</h1>'):]  # delete the header
+    temptxt = [s.replace('**', '') for s in template] # TODO: sanitize other Markdown syntax
     keyword = [s[:min(16, s.index('\n'))] for s in temptxt]
     parser = MyHTMLParser(keyword)
     parser.feed(clean_doc)
 
-    # =====================SETTINGS====================
     text = parser.SText
     sen = [[len(re.findall(r"(^|[\.\?!])[ \"]*[A-Z]", s, re.M)) for s in b] for b in text]
     wrd = [[len(re.findall(r"\b\w+\b", s)) for s in b] for b in text]
@@ -101,14 +93,13 @@ def AssignHost():
     fk = [fk_weight(sum(s), sum(w), sum(y)) for s,w,y in zip(sen,wrd,syl)] # B[]
 
     SWordCount = [[swc*f for swc in w] for f,w in zip(fk,wrd)]  # B[S[]], weighted
-    SID = parser.SID
-    SNperB = [len(b) for b in SWordCount]  # B[SN]
-    PNperB = [int(sum(swc)/P_WORD_COUNT_AVG+1) for swc in SWordCount]
-    PNperB = [min(pn,sn) for pn,sn in zip(PNperB,SNperB)] # B[PN]
+    PNperB = [min(int(sum(swc)/P_WORD_COUNT_AVG+1), len(swc)) for swc in SWordCount] # B[PN]
+    return SWordCount, PNperB, parser.SID
 
-    host = list(set(chain.from_iterable(t['host'] for t in config['assign'])))
-    host_per_b = [[]] * len(SNperB)
-    for t in config['assign']:
+def get_host(task, BN):
+    host = list(set(chain.from_iterable(t['host'] for t in task)))
+    host_per_b = [[]] * BN
+    for t in task:
         hn = list(host.index(h) for h in t['host'])
         random.shuffle(hn)
         # flatten block range
@@ -117,14 +108,16 @@ def AssignHost():
                     for c in [c.split('-') for c in t['range'].split(',')])
         for b in taskB:
             host_per_b[b] = hn
+    return host, host_per_b
 
-    ans_hassign = \
-        assign(SNperB, SWordCount, PNperB, len(host), host_per_b)
+def _check_solution(st):
+    v = max(st.HostWordCount) - min(st.HostWordCount)
+    if v < st.Ans_HostWordCountRange:
+        st.Ans_HostWordCountRange = v
+        st.Ans_HAssign = copy.deepcopy(st.HAssign)
 
-    post_assign(SID, ans_hassign, host, doc_id, raw_doc)
-    return "Done!"
-
-def assign(SNperB, SWordCount, PNperB, hostn, host_per_b):
+def assign(SWordCount, PNperB, hostn, host_per_b):
+    SNperB = [len(b) for b in SWordCount]  # B[SN]
     def _assign(st, b, s, last_assignee, lastp):
         if b == len(PNperB):
             _check_solution(st)
@@ -182,6 +175,14 @@ def post_assign(SID, hassign, host, doc_id, raw_doc):
         q4a.edit_document(thread_id=doc_id,
                           content=f"<p class='line'>{content}</p>",
                           operation=q4a.REPLACE_SECTION, section_id=sid)
+
+def AssignHost():
+    doc_id, raw_doc = precondition()
+    SWordCount, PNperB, SID = parse_doc(raw_doc, config['block'])
+    host, host_per_b = get_host(config['assign'], len(SID))
+    ans_hassign = assign(SWordCount, PNperB, len(host), host_per_b)
+    post_assign(SID, ans_hassign, host, doc_id, raw_doc)
+    return "Done!"
 
 if __name__ == "__main__":
     AssignHost()
