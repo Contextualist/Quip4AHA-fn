@@ -1,4 +1,4 @@
-from quip4aha import q4a, week, InvalidOperation
+from quip4aha import q4a, week
 import re
 import requests
 from datetime import datetime, timedelta
@@ -25,7 +25,7 @@ def fetch_weather(next_nday):
     )
 
 def compose(doc_id, w):
-    html = q4a.get_thread(id=doc_id)['html']
+    html = q4a.get_latest_script()['html']
     
     sid, host, date = re.search(
         r"<p id='([a-zA-Z0-9]{11})'.*?>(.*)Good Morning AHA.+?Wednesday\, ([\w ]+)\..+?<\/p>", html).group(1,2,3)

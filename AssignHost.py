@@ -68,7 +68,7 @@ class MyHTMLParser(HTMLParser):
 
 def precondition():
     doc_id = q4a.latest_script_id
-    raw_doc = q4a.get_thread(id=doc_id)["html"]
+    raw_doc = q4a.get_latest_script()["html"]
     '''
     docURL = ... # test doc URL: [a-zA-Z0-9]{12}
     thread = q4a.get_thread(id=docURL)

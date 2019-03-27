@@ -24,35 +24,37 @@ from quip import QuipClient
 
 
 class cache(object):
-    """A decorator to cache functions based on the expiration date
-    given by the callback next_expr each time
+    """A decorator to cache functions based on the expiration date/
+    datetime given by the callback next_expr each time
     """
 
     def __init__(self, next_expr):
         self.__c = None
-        self.__next_expr = next_expr
-        self.__bestbefore = datetime.date.min
+        self.__next_expr = next_expr # any func returns a date/datetime
+        self.__bestbefore = datetime.date.min.timetuple()
 
     def __call__(self, fn):
 
         def cached_fn(*args, **kwargs):
-            if datetime.datetime.today().date() > self.__bestbefore:
+            if not cached_fn.has_cache():
                 self.__c = fn(*args, **kwargs)
-                self.__bestbefore = self.__next_expr()
+                self.__bestbefore = self.__next_expr().timetuple()
             return self.__c
+        cached_fn.has_cache = \
+            lambda: datetime.datetime.today().timetuple() <= self.__bestbefore
 
         return cached_fn
 
 
 class QuipClient4AHA(QuipClient):
     """A customized Quip client dedicated for AHA Broadcast."""
-    
+
     def __init__(self, conf):
         QuipClient.__init__(self, access_token=os.environ['token'])
         self.AHABC_ID = conf["folder_id"]
         self.__ws = None
         self.__ws_retry = 0
-    
+
     @property
     @cache(lambda:datetime.date.max)
     def self_id(self):
@@ -62,23 +64,36 @@ class QuipClient4AHA(QuipClient):
     def folder_AHABC(self):
         return self.get_folder(id=self.AHABC_ID)
 
-    @property
-    @cache(lambda:week.RecentWeekDay('next Wednesday'))
-    def latest_script_id(self):
+    @cache(lambda:datetime.datetime.today() + datetime.timedelta(seconds=10))
+    def __get_latest_script(self):
         AHABC = self.folder_AHABC
         nxtwed = week.RecentWeekDay('next Wednesday')
         title = nxtwed.strftime('%m%d')
         #lstfri = [int(time.mktime(
         #    time.strptime('%s 16:10:00' % (week.RecentWeekday('last Friday')), "%Y-%m-%d %H:%M:%S")))]
-        docID = []
-        for td in AHABC['children']:
-            if (('thread_id' in td) and (self.get_thread(td['thread_id'])['thread']['title']==title)):
-                docID.append(td['thread_id'])
-        if docID == []:
+        docs_id = (td['thread_id'] for td in AHABC['children'] if 'thread_id' in td)
+        matched = [t for t in self.get_threads(docs_id).values() if t['thread']['title']==title]
+        if matched == []:
             raise InvalidOperation("Script not found: There's no legitimate host script for next week's broadcast.")
-        if len(docID) > 1:
+        if len(matched) > 1:
             raise InvalidOperation("Redundancy Error: More than one scripts for the next broadcast are found!", 409)
-        return docID[0]
+        return matched[0]
+
+    @property
+    @cache(lambda:week.RecentWeekDay('next Thursday', IgnoreToday=True))
+    def latest_script_id(self):
+        return self.__get_latest_script()['thread']['id']
+
+    def get_latest_script(self):
+        if self.__get_latest_script.has_cache():
+            return self.__get_latest_script()
+        return self.get_thread(id=self.latest_script_id)
+
+    def _fetch_json(self, path, *args, **kwargs):
+        s = time.time()
+        rv = super(QuipClient4AHA, self)._fetch_json(path, *args, **kwargs)
+        print(f"Quip API: request {path} in {time.time()-s:.3f}s")
+        return rv
 
     def message_feed(self, msg_handler):
         """message_feed maintains a blocking websocket connection 
