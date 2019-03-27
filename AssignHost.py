@@ -129,6 +129,7 @@ def assign(SWordCount, PNperB, hostn, host_per_b):
             if h == last_assignee:
                 if s == 0: continue  # cross block, no
                 p = lastp
+                st.HAssign[b][s] = -1
             else:
                 p = lastp + 1
                 st.HAssign[b][s] = h
@@ -149,12 +150,12 @@ def assign(SWordCount, PNperB, hostn, host_per_b):
         HAssign=[[-1]*s for s in SNperB],
         Ans_HAssign=[],
     )
-    st.HAssign[0][0] = host_per_b[0][0]
-    st.HostWordCount[host_per_b[0][0]] += SWordCount[0][0]
+    st.HAssign[0][0] = h0 = host_per_b[0][0]
+    st.HostWordCount[h0] += SWordCount[0][0]
     if PNperB[0] > 1:
-        _assign(st, 0, 1, 0, 0)
+        _assign(st, 0, 1, h0, 0)
     else:
-        _assign(st, 1, 0, 0, -1)
+        _assign(st, 1, 0, h0, -1)
     return st.Ans_HAssign
 
 def post_assign(SID, hassign, host, doc_id, raw_doc):
