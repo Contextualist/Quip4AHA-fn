@@ -22,6 +22,7 @@ import operator
 from collections import OrderedDict
 from dataclasses import make_dataclass
 
+S_CHAR_COUNT_MIN = 50
 P_WORD_COUNT_AVG = 468 # weighted word count for an avg portion (350w * 1.336)
 fk_weight = lambda sn, wd, sl: 1.0146 ** (100 - (
           206.835 - 1.015*(wd/sn) - 84.6*(sl/wd)
@@ -58,7 +59,7 @@ class MyHTMLParser(HTMLParser):
             self.__SNNow = 0
             self.SText += [[""]]
             self.SID += [[(self.__SIDNow, self.__br)]]
-        elif self.__newline >= 2:
+        elif self.__newline>=2 and len(self.SText[self.__BNNow][self.__SNNow])>=S_CHAR_COUNT_MIN:
             self.__SNNow += 1  # new section
             self.SText[self.__BNNow] += [""]
             self.SID[self.__BNNow] += [(self.__SIDNow, self.__br)]
