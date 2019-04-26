@@ -2,8 +2,9 @@
     "version": 2,
     "regions": ["hnd"],
     "name": "q4a",
+    "alias": "q4a.now.sh",
     "builds": [
-        { "src": "main.py", "use": "@rmnclmnt/python-wsgi" }
+        { "src": "main.py", "use": "@now/python" }
     ],
     "env": {
         "token": "@quip_token",
