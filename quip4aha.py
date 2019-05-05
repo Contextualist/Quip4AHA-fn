@@ -18,7 +18,6 @@ import argparse
 import json
 from urllib.request import urlopen, Request
 import threading
-import websocket
 
 from quip import QuipClient
 
@@ -52,8 +51,6 @@ class QuipClient4AHA(QuipClient):
     def __init__(self, conf):
         QuipClient.__init__(self, access_token=os.environ['token'])
         self.AHABC_ID = conf["folder_id"]
-        self.__ws = None
-        self.__ws_retry = 0
 
     @property
     @cache(lambda:datetime.date.max)
@@ -97,58 +94,6 @@ class QuipClient4AHA(QuipClient):
         rv = super(QuipClient4AHA, self)._fetch_json(path, *args, **kwargs)
         print(f"Quip API: request {path} in {time.time()-s:.3f}s")
         return rv
-
-    def message_feed(self, msg_handler):
-        """message_feed maintains a blocking websocket connection 
-        with Quip real-time API, and pass Quip messages with thread ID
-        over to `msg_handler`.
-        """
-
-        self.__ws_retry = 3
-        HEARTBEAT_INTERVAL = 20
-        HEARTBEAT_MSG = json.dumps({"type": "heartbeat"})
-
-        #TODO: log
-        def on_error(ws, err): print("websocket error:", err)
-
-        def on_close(ws):
-            ev.set()
-            print("websocket disconnected")
-
-        def on_open(ws):
-
-            def run():
-                while not ev.wait(HEARTBEAT_INTERVAL):
-                    ws.send(HEARTBEAT_MSG)
-
-            startd(run, ev.set)
-            print("websocket connected")
-
-        def on_message(ws, rawmsg):
-            m = json.loads(rawmsg)
-            if (m['type']!='message' or m['thread']['id']!=self.latest_script_id 
-                or self.self_id not in m['message'].get('mention_user_ids', [])):
-                return
-            m['message'].update({'thread_id':m['thread']['id']})
-            try:
-                msg_handler(m['message'])
-            except Exception as e:
-                print(e)
-
-        while self.__ws_retry > 0:
-            websocket_info = self.new_websocket()
-            ev = threading.Event()
-            #websocket.enableTrace(True)
-            self.__ws = websocket.WebSocketApp(websocket_info["url"],
-                on_message=on_message, on_error=on_error, on_close=on_close, on_open=on_open)
-            self.__ws.run_forever()
-            self.__ws_retry -= 1
-
-    def message_feed_close(self):
-        self.__ws_retry = 0
-        if self.__ws:
-            self.__ws.close()
-            self.__ws = None
 
 
 def parse_config():
