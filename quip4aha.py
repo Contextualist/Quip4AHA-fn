@@ -66,6 +66,7 @@ class QuipClient4AHA(QuipClient):
 
     @cache(lambda:datetime.datetime.today() + datetime.timedelta(seconds=10))
     def __get_latest_script(self):
+        """Invoke `self.get_threads` and select and return the right doc."""
         AHABC = self.folder_AHABC
         nxtwed = week.RecentWeekDay('next Wednesday')
         title = nxtwed.strftime('%m%d')
@@ -85,9 +86,11 @@ class QuipClient4AHA(QuipClient):
         return self.__get_latest_script()['thread']['id']
 
     def get_latest_script(self):
+        """Return the right doc, use cache but avoid generating (slow) one."""
+        sid = self.latest_script_id # If we need to start from scratch, generate for both.
         if self.__get_latest_script.has_cache():
             return self.__get_latest_script()
-        return self.get_thread(id=self.latest_script_id)
+        return self.get_thread(id=sid) # twice as fast as `get_threads`
 
     def _fetch_json(self, path, *args, **kwargs):
         s = time.time()
